@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     HELM = '/usr/local/bin/helm'
-    KUBECONFIG = '/home/ubuntu/.kube/config'  // use ubuntu's kubeconfig (NOT root)
+    KUBECONFIG = '/var/lib/jenkins/.kube/config'  // use ubuntu's kubeconfig (NOT root)
   }
 
   stages {
