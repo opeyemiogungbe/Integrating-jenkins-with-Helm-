@@ -1,1 +1,1 @@
-# Helm2
+# This is Helm integration with jenkins
