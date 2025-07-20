@@ -2,7 +2,7 @@
 This project demonstrates how to set up a Jenkins CI/CD pipeline to deploy an application using Helm to a local Kubernetes cluster. It’s ideal for development or proof-of-concept setups where cloud resources are not required.
 
 ## Project Overview
-We will be doinng the following:
+We will be doing the following:
 
 install and run Jenkins locally in a Docker container or natively
 
