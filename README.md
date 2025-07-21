@@ -157,7 +157,7 @@ pipeline {
   }
 }
 ```
-
+![jenkinsfile](https://i.postimg.cc/CxR4ZTtB/Screenshot-2025-07-20-070210.png)
 
 ## GitHub Webhook Integration (Auto-trigger Builds) 🔄 
 
@@ -173,19 +173,44 @@ Save
 
 Make sure your Jenkins server is accessible from GitHub (use ngrok or localtunnel if needed):
 
+![webhook](https://i.postimg.cc/RC3fQQdy/Screenshot-2025-07-20-001315.png)
 
 
-## Verify the Deployment🔍
-```
-kubectl get pods
-kubectl get svc
-kubectl port-forward svc/webapp 8080:80
-Visit: http://localhost:8080
-```
 
-💸 Resource Cleanup
-Since this setup runs locally, there's no AWS billing risk. However, you can stop all Kubernetes pods with:
+## Verify the Deployment through Jenkins pipeline🔍
+We are going to check if our pipeline trigger and run the content of our Jenkinsfile...
+
+![jenkins trigger](https://i.postimg.cc/8k29spf6/Screenshot-2025-07-20-071729.png)
+
+### Update Helm Chart and push changes
+
+Now, we will open 'Values.yaml' in our webapp directory and change the replicacount to 3, then save.
+
+![edit value.yaml](https://i.postimg.cc/prXYXmgD/Screenshot-2025-07-20-022548.png)
+
+We are also going to open 'deployment.yaml' in 'template directory' under resources block, and update the resource requests as follows:
+
 ```
-kubectl delete all --all
-Or reset the cluster from Docker Desktop settings.
+resources:
+
+requests:
+
+memory: "180Mi"
+
+cpu: "120m"
 ```
+![deployment.yaml](https://i.postimg.cc/fLHSCBr9/Screenshot-2025-07-21-050947.png)
+
+If we check the image above, we will see our deployment.yaml is in modular form, referencing values.yaml, so we will need to edit our resource block from values.yaml instead.
+
+![edit resource block](https://i.postimg.cc/d3b1NXmL/Screenshot-2025-07-21-051845.png)
+
+We commit and push change to our GitHub repo so Jenkins can pick up our changes through webhook and apply our changes.
+
+![commit and push](https://i.postimg.cc/tCJwBJYZ/Screenshot-2025-07-20-025741.png)
+
+Now let's see if GitHub picks up our changes
+
+![jenkins update](https://i.postimg.cc/TwhNFfRq/Screenshot-2025-07-20-072252.png)
+
+Now we can see our Jenkins apply our changes, which means we have successfully integrated Helm with Jenkins
