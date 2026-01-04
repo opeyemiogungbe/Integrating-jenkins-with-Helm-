@@ -31,6 +31,7 @@ Jenkins
 ## Project Setup
 
 1. ✅Create an EKS Cluster using eksctl
+
 Note: Before creating our cluster we need to set up our AWS CLI so we can manage aws from our terminal. Example of our CLI configuration is shown below
 
 ![AWS CLI](https://i.postimg.cc/fWmhXPkn/Screenshot-2025-07-19-070414.png)
@@ -61,67 +62,80 @@ You should see something like:
 
 ![cluster](https://i.postimg.cc/wBQwghjb/Screenshot-2025-07-19-113728.png)
 
-2. 🚀 Install Jenkins (Local or Docker)
+2. 🚀 Provision Jenkins EC2 Server
 
-Native Install (macOS/Linux)
-```
-brew install jenkins-lts         # For macOS (Homebrew)
-sudo apt install jenkins         # For Ubuntu/Debian
-```
+Launch an EC2 instance (Ubuntu) with security group allowing:
 
-Then start Jenkins:
+Port 22 (SSH)
+
+Port 8080 (Jenkins)
+
+SSH into the instance and install Jenkins:
+
 ```
+sudo apt update
+sudo apt install openjdk-17-jdk -y
+wget -q -O - https://pkg.jenkins.io/debian/jenkins.io.key | sudo apt-key add -
+sudo sh -c 'echo deb https://pkg.jenkins.io/debian binary/ > /etc/apt/sources.list.d/jenkins.list'
+sudo apt update
+sudo apt install jenkins -y
+```
+Start and enable Jenkins:
+
+```
+sudo systemctl enable jenkins
 sudo systemctl start jenkins
-Access Jenkins at: http://localhost:8080
-```
-Option B: Run Jenkins in Docker
-```
-docker run -d --name jenkins \
-  -p 8080:8080 -p 50000:50000 \
-  -v jenkins_home:/var/jenkins_home \
-  -v ~/.kube:/var/jenkins_home/.kube \
-  -v /usr/local/bin/kubectl:/usr/local/bin/kubectl \
-  -v /usr/local/bin/helm:/usr/local/bin/helm \
-  jenkins/jenkins:lts
-🔐 Make sure you bind-mount ~/.kube and helm, kubectl binaries into the container.
-```
-Using the first option, our Jenkins is successfully installed, and all the necessary plugins are installed.
-
-![jenkins](https://i.postimg.cc/Xvp5XjBt/Screenshot-2025-07-16-060119.png)
-
-3. 🔧 Setup kubectl and Helm
-
-* kubectl
-```
-brew install kubectl               # macOS
-sudo apt install kubectl -y       # Linux
-```
-* Helm
-```
-brew install helm
-sudo snap install helm --classic
 ```
 
-4. 🛡️ Grant Jenkins Kubernetes Access
+![Start Jenkins](https://i.postimg.cc/B6gnZmjj/Screenshot-2025-07-16-054500.png)
 
-Ensure Jenkins has access to your kubeconfig file. If using Docker, mount your local .kube/config file:
+Access Jenkins at: http://<EC2-Public-IP>:8080
+
+![Jenkins](https://i.postimg.cc/vmrKCjKP/Screenshot-2025-07-16-060119.png)
+
+
+
+
+3. 🔐 Configure AWS Credentials on Jenkins Server
+
+We must ensure AWS CLI is installed on Jenkins sever so they can access each other:
 
 ```
--v ~/.kube:/var/jenkins_home/.kube
+sudo apt install awscli -y
 ```
-Inside Jenkins or in the Jenkinsfile, set:
+Then run:
+
 ```
-environment {
-  KUBECONFIG = '/var/jenkins_home/.kube/config'
-}
+aws configure
 ```
-Or if Jenkins is installed natively, use:
+Now like step one, we must enter our Access Key, Secret Key, Region (e.g. us-east-1), and output format (e.g. json).
+
+
+4. 📦 Install kubectl and Helm:
+
 ```
-environment {
-  KUBECONFIG = "$HOME/.kube/config"
-}
+# kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+
+# helm
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
 ```
- ## Project Structure 📁
+5. ⚙️ Configure kubeconfig for Jenkins
+
+Ensure kubeconfig is generated and available at:
+
+```
+mkdir -p /var/lib/jenkins/.kube
+cp /home/ubuntu/.kube/config /var/lib/jenkins/.kube/config
+chown -R jenkins:jenkins /var/lib/jenkins/.kube
+chmod 600 /var/lib/jenkins/.kube/config
+```
+
+🧪 Application Deployment Using Helm
+
+Our application should be packaged as a Helm chart. Example structure
 
 ```
 webapp/
@@ -133,7 +147,18 @@ webapp/
 Jenkinsfile
 ```
 
-## Jenkinsfile📝
+🧰 Jenkins Pipeline Setup
+1. We create a Jenkins Pipeline Job
+
+Set the pipeline source to Pipeline script from SCM
+
+SCM: Git
+
+Repo URL: https://github.com/<our-username>/Integrating-jenkins-with-Helm-.git
+
+Script Path: Jenkinsfile
+
+📝 Jenkinsfile
 
 ```
 pipeline {
@@ -141,7 +166,7 @@ pipeline {
 
   environment {
     HELM = '/usr/local/bin/helm'
-    KUBECONFIG = "$HOME/.kube/config"
+    KUBECONFIG = '/var/lib/jenkins/.kube/config'
   }
 
   stages {
@@ -165,7 +190,8 @@ pipeline {
   }
 }
 ```
-![jenkinsfile](https://i.postimg.cc/CxR4ZTtB/Screenshot-2025-07-20-070210.png)
+
+![Jenkinsfile](https://i.postimg.cc/ydd0H3dY/Screenshot-2026-01-04-074556.png)
 
 ## GitHub Webhook Integration (Auto-trigger Builds) 🔄 
 
