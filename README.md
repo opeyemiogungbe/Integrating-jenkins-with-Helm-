@@ -4,42 +4,53 @@ This project demonstrates how to set up a Jenkins CI/CD pipeline to deploy an ap
 ## Project Overview
 We will be doing the following:
 
-install and run Jenkins locally in a Docker container or natively
+install and run Jenkins on a dedicated server
 
-Install and Use Helm to deploy apps into Kubernetes on Docker Desktop
+Install Helm on our dedicated jenkins server and Use Helm to deploy our apps on Amazon Eks (Note: We must have provisioned Amazon EKS cluster with nodes on our AWS)
 
 Trigger deployments automatically via GitHub webhooks
 
-Securely configure Jenkins access to local Kubeconfig
+Secure Kubernetes access using Kubeconfig
 
 Deploy from a Helm chart structure
 
 ### Prerequisites
 
-We must ensure the following are installed on our local machine:
+We must ensure the following:
 
-Docker Desktop
+AWS Account with CLI configured
 
-Kubernetes enabled in Docker Desktop
+EC2 Key pair and proper IAM roles for EKS and EC2
 
-kubectl
+GitHub repository for our Helm chart and Jenkinsfile
 
 Helm
 
 Jenkins
 
-GitHub repository for your Helm chart and Jenkinsfile
-
-
 ## Project Setup
 
-1. ✅ We enable Kubernetes in Docker Desktop
+1. ✅Create an EKS Cluster using eksctl
+Note: Before creating our cluster we need to set up our AWS CLI so we can manage aws from our terminal. Example of our CLI configuration is shown below
+
+![AWS CLI](https://i.postimg.cc/fWmhXPkn/Screenshot-2025-07-19-070414.png)
+
+Then we go ahead to create our cluster
 
 ```
-Open Docker Desktop → Settings → Kubernetes → Enable Kubernetes.
-
-Click "Apply & Restart".
+eksctl create cluster \
+  --name eksctl-helm-cluster \
+  --version 1.29 \
+  --region us-east-1 \
+  --nodegroup-name jenkins-nodes \
+  --node-type t3.medium \
+  --nodes 2 \
+  --nodes-min 1 \
+  --nodes-max 3 \
+  --managed
 ```
+![Cluster](https://i.postimg.cc/YSYJgGqw/Screenshot-2025-07-19-071030.png)
+
 Run the following to confirm:
 
 ```
@@ -48,10 +59,7 @@ kubectl get nodes
 
 You should see something like:
 
-```
-NAME             STATUS   ROLES           AGE   VERSION
-docker-desktop   Ready    control-plane   ...   v1.xx.x
-```
+![cluster](https://i.postimg.cc/wBQwghjb/Screenshot-2025-07-19-113728.png)
 
 2. 🚀 Install Jenkins (Local or Docker)
 
